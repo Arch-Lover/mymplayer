@@ -1,6 +1,6 @@
 #!/bin/bash
 install_path=`pwd`
-chmod +x "$install_path/mymplayer"
-chmod +x "$install_path/My Mplayer.desktop"
-sudo cp -rf "$install_path/mymplayer" /usr/bin/
-sudo cp -rf "$install_path/My Mplayer.desktop" /usr/share/applications/
+chmod +x "$install_path/myvlcplayer"
+chmod +x "$install_path/My VLCplayer.desktop"
+sudo cp -rf "$install_path/myvlcplayer" /usr/bin/
+sudo cp -rf "$install_path/My VLCplayer.desktop" /usr/share/applications/
