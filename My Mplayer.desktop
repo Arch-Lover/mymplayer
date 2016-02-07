@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=My Mplayer
+Name=My VLCplayer
 Comment=Media Player
 GenericName=Media Player
-Icon=smplayer
+Icon=vlc
 Terminal=false
 Type=Application
 Categories=AudioVideo;Player;Recorder;
@@ -12,4 +12,4 @@ Terminal=false
 Type=Application
 Categories=GNOME;GTK;Player;
 StartupNotify=true
-Exec=mymplayer %U
+Exec=vlc %U
