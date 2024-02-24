@@ -1,42 +1,86 @@
 #!/bin/bash
-#My VLCplayer is a fork (made by mojtaba) of My Mplayer written by alireza.amirsamimi@gmail.com
-#checking file neme!if file not exist then zenity's file-selection form will open for selecting the file.
-file_name="$@"
-if [ ! -f "$file_name" ];then
-	file_name=`zenity --file-selection --title="My VLCplayer" `
-        if [ $? -eq 1 ]
-           then
-           	notify-send "exit"
-						exit
+
+# Prompt user to select a file if not provided as an argument
+select_file() {
+    local input_file="$1"
+
+    # If input file doesn't exist, prompt for file selection using Zenity
+    if [ ! -f "$input_file" ]; then
+        input_file=$(zenity --file-selection --title="My VLCplayer")
+        if [ $? -eq 1 ]; then
+            notify-send "Exit"
+            exit 1
         fi
-fi
-#finding subtitle file!
-file_name_extension="${file_name##*/}"
-extension="${file_name_extension##*.}"
-file_name_with_out_extension=${file_name_extension%$extension}
-file_name_path="${file_name%$file_name_extension}"
-ls "$file_name_path" | grep "$file_name_with_out_extension" > /tmp/vlc_player_script_temp.txt
-while read -r line;do
-	if [ "$line" != "$file_name_extension" ];then
-		subtitle_extension="${line##*.}"
-		for i in srt sub gsub aqt jss pjs psb rt smi stl ssf ssa ass usf ; do
-			if [ "$subtitle_extension" == "$i" ];then
-				subtitle_file_name="$line"
-				flag="1"
-				break
-			fi
-		done
-	fi
-done < /tmp/vlc_player_script_temp.txt
-if [ "$flag" != "1" ];then
-	notify-send "No Subtitle file founded"
-fi
-rm /tmp/vlc_player_script_temp.txt
-#cheking Subtitle's encoding!
-subtitle_encoding=$(file --mime-encoding -b "$file_name_path/$subtitle_file_name")
-if [ "$subtitle_encoding" == "unknown-8bit" ];then
-	subtitle_encoding="WINDOWS-1256"
-fi
-#set mplayer for subtitle
-vlc "$file_name" --sub-autodetect-file
-exit
+    fi
+
+    echo "$input_file"
+}
+
+# Find a suitable subtitle file based on the main file name
+find_subtitle() {
+    local directory="$1"
+    local main_file="$2"
+    local found_subtitle=""
+
+    # Look for potential subtitle files in the directory
+    find "$directory" -maxdepth 1 -type f -name "$main_file.*" | while read -r line; do
+        subtitle_extension="${line##*.}"
+        supported_extensions="srt sub gsub aqt jss pjs psb rt smi stl ssf ssa ass usf"
+
+        # Check if the subtitle file extension is supported
+        for ext in $supported_extensions; do
+            if [ "$subtitle_extension" == "$ext" ]; then
+                found_subtitle="$line"
+                break
+            fi
+        done
+
+        [ -n "$found_subtitle" ] && break
+    done
+
+    # Notify if no suitable subtitle file is found
+    [ -z "$found_subtitle" ] && notify-send "No suitable subtitle file found"
+    echo "$found_subtitle"
+}
+
+# Detect subtitle's encoding, assuming Windows-1256 for unknown encoding
+detect_encoding() {
+    local directory="$1"
+    local subtitle_file="$2"
+    local encoding=$(file --mime-encoding -b "$subtitle_file")
+
+    if [ "$encoding" == "unknown-8bit" ]; then
+        encoding="WINDOWS-1256"
+    fi
+
+    echo "$encoding"
+}
+
+main() {
+    local initial_file="$@"
+
+    # Check if input file argument is missing
+    if [ -z "$initial_file" ]; then
+        notify-send "No input file specified"
+        exit 1
+    fi
+
+    initial_file=$(select_file "$initial_file")
+
+    # Extract file name and directory
+    filename="${initial_file##*/}"
+    directory="${initial_file%/*}"
+
+    # Find a suitable subtitle file
+    subtitle_file=$(find_subtitle "$directory" "$filename")
+    if [ -n "$subtitle_file" ]; then
+        subtitle_encoding=$(detect_encoding "$directory" "$subtitle_file")
+
+        # Play the video file in VLC with detected subtitle and encoding
+        vlc "$initial_file" --sub-file="$subtitle_file" --sub-encoding="$subtitle_encoding"
+    fi
+
+    exit
+}
+
+main "$@"
